@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Search, Target, CheckSquare, BarChart3, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Search, Target, CheckSquare, BarChart3, AlertTriangle, ArrowLeft, Thermometer } from 'lucide-react';
 
 interface DiagnosticResultsProps {
   result: DiagnosticResult;
@@ -24,6 +24,27 @@ export function DiagnosticResults({ result, onReset }: DiagnosticResultsProps) {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
+      {/* Climate Zone Detection */}
+      <Card className="shadow-lg border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-xl font-serif">
+            <Thermometer className="h-5 w-5 text-primary" />
+            Detected Climate Zone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Badge variant="default" className="text-base px-4 py-1">
+              {result.climateInfo.label}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              Primary concern: {result.climateInfo.primaryConcern === 'both' ? 'Heating & Cooling' : result.climateInfo.primaryConcern === 'heating' ? 'Heating' : 'Cooling'}
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-sm">{result.climateInfo.characteristics}</p>
+        </CardContent>
+      </Card>
+
       {/* Sustainability Diagnostic */}
       <Card className="shadow-lg">
         <CardHeader className="pb-3">
