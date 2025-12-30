@@ -1,3 +1,5 @@
+import { detectClimateZone, getClimateRecommendations, ClimateInfo } from './climateZones';
+
 export interface DiagnosticInput {
   location: string;
   buildingType: 'residential' | 'commercial' | 'educational' | 'other';
@@ -12,6 +14,7 @@ export interface DiagnosticResult {
   checklist: string[];
   impactLevel: 'Low' | 'Medium' | 'High';
   impactExplanation: string;
+  climateInfo: ClimateInfo;
 }
 
 const buildingTypeLabels: Record<string, string> = {
@@ -30,22 +33,25 @@ const projectStageLabels: Record<string, string> = {
 export function generateDiagnostic(input: DiagnosticInput): DiagnosticResult {
   const { location, buildingType, floorArea, projectStage, efficiencyLevel } = input;
   
+  // Detect climate zone based on location
+  const climateInfo = detectClimateZone(location);
+  
   const buildingLabel = buildingTypeLabels[buildingType];
   const stageLabel = projectStageLabels[projectStage];
   const isLargeBuilding = floorArea >= 2000;
   const isNewConstruction = projectStage === 'new_construction';
   const isRenovation = projectStage !== 'new_construction';
   
-  // Generate diagnostic paragraph
+  // Generate diagnostic paragraph with climate context
   const diagnosticParts: string[] = [];
   
   if (isNewConstruction) {
     diagnosticParts.push(
-      `This ${stageLabel} project for a ${buildingLabel} in ${location} presents significant opportunities to integrate sustainability measures from the earliest design stages.`
+      `This ${stageLabel} project for a ${buildingLabel} in ${location} (${climateInfo.label} climate: ${climateInfo.characteristics.toLowerCase()}) presents significant opportunities to integrate climate-responsive sustainability measures from the earliest design stages.`
     );
   } else {
     diagnosticParts.push(
-      `This ${stageLabel} project for a ${buildingLabel} in ${location} offers valuable opportunities to enhance building performance through targeted interventions.`
+      `This ${stageLabel} project for a ${buildingLabel} in ${location} (${climateInfo.label} climate: ${climateInfo.characteristics.toLowerCase()}) offers valuable opportunities to enhance building performance through climate-appropriate interventions.`
     );
   }
   
@@ -59,25 +65,26 @@ export function generateDiagnostic(input: DiagnosticInput): DiagnosticResult {
     );
   }
   
-  if (efficiencyLevel === 'high') {
+  // Add climate-specific context
+  if (climateInfo.primaryConcern === 'cooling') {
     diagnosticParts.push(
-      `The high efficiency target enables a systemic approach combining passive strategies, efficient systems, and integrated solutions.`
+      `Given the ${climateInfo.label.toLowerCase()} conditions, cooling load reduction and heat mitigation strategies should be prioritized.`
     );
-  } else if (efficiencyLevel === 'medium') {
+  } else if (climateInfo.primaryConcern === 'heating') {
     diagnosticParts.push(
-      `A medium efficiency target balances performance improvements with practical implementation considerations.`
+      `Given the ${climateInfo.label.toLowerCase()} conditions, heating efficiency and thermal retention strategies should be prioritized.`
     );
   } else {
     diagnosticParts.push(
-      `The low efficiency target prioritizes feasible, cost-effective interventions with clear returns.`
+      `The climate requires balanced attention to both heating and cooling performance throughout the year.`
     );
   }
 
-  // Generate recommendations based on context
-  const recommendations = generateRecommendations(input, isNewConstruction, isRenovation, isLargeBuilding);
+  // Generate recommendations based on context including climate
+  const recommendations = generateRecommendations(input, isNewConstruction, isRenovation, isLargeBuilding, climateInfo);
   
   // Generate checklist linked to recommendations
-  const checklist = generateChecklist(recommendations);
+  const checklist = generateChecklist(recommendations, climateInfo);
   
   // Determine impact level
   const { impactLevel, impactExplanation } = calculateImpact(input, isLargeBuilding, isNewConstruction);
@@ -88,6 +95,7 @@ export function generateDiagnostic(input: DiagnosticInput): DiagnosticResult {
     checklist,
     impactLevel,
     impactExplanation,
+    climateInfo,
   };
 }
 
@@ -95,94 +103,107 @@ function generateRecommendations(
   input: DiagnosticInput,
   isNewConstruction: boolean,
   isRenovation: boolean,
-  isLargeBuilding: boolean
+  isLargeBuilding: boolean,
+  climateInfo: ClimateInfo
 ): string[] {
   const { buildingType, efficiencyLevel } = input;
+  const climateRecs = getClimateRecommendations(climateInfo);
   
   const recommendations: string[] = [];
   
-  // Priority 1: Envelope (always highest priority for passive-first approach)
+  // Priority 1: Envelope (climate-specific)
   if (isRenovation) {
     recommendations.push(
-      'Evaluate thermal envelope performance and identify opportunities for insulation upgrades, window improvements, and air-tightness enhancements to reduce heating and cooling loads.'
+      `Evaluate thermal envelope performance with climate-specific priorities. ${climateRecs.envelopeFocus}`
     );
   } else {
     recommendations.push(
-      'Prioritize high-performance building envelope design with optimized insulation levels, thermally broken assemblies, and appropriate glazing specifications for the local climate.'
+      `Prioritize high-performance building envelope design optimized for ${climateInfo.label.toLowerCase()} conditions. ${climateRecs.envelopeFocus}`
     );
   }
   
-  // Priority 2: Passive strategies
+  // Priority 2: Passive strategies (climate-specific)
   if (isNewConstruction) {
     recommendations.push(
-      'Integrate passive design strategies including building orientation, natural ventilation pathways, daylighting optimization, and external shading to minimize mechanical system dependence.'
+      `Integrate passive design strategies appropriate for the ${climateInfo.label.toLowerCase()} climate. ${climateRecs.passiveStrategies}`
     );
   } else {
     recommendations.push(
-      'Assess opportunities for passive improvements such as enhanced natural ventilation, solar shading additions, and improved daylighting to reduce operational energy requirements.'
+      `Assess opportunities for passive improvements suited to local climate conditions. ${climateRecs.passiveStrategies}`
     );
   }
   
-  // Priority 3: Systems (varies by efficiency level)
+  // Priority 3: Systems (climate and efficiency level specific)
   if (efficiencyLevel === 'high') {
     if (buildingType === 'commercial' || buildingType === 'educational') {
       recommendations.push(
-        'Specify high-efficiency HVAC systems with heat recovery, demand-controlled ventilation, and integrated building management for optimized operation.'
+        `Specify high-efficiency HVAC systems optimized for ${climateInfo.primaryConcern === 'cooling' ? 'cooling-dominant' : climateInfo.primaryConcern === 'heating' ? 'heating-dominant' : 'balanced heating and cooling'} operation. ${climateRecs.systemsPriority}`
       );
     } else {
       recommendations.push(
-        'Select high-efficiency heating and cooling systems with appropriate sizing, zoning capabilities, and smart controls for responsive operation.'
+        `Select high-efficiency systems sized for ${climateInfo.label.toLowerCase()} climate demands. ${climateRecs.systemsPriority}`
       );
     }
   } else if (efficiencyLevel === 'medium') {
     recommendations.push(
-      'Evaluate mechanical system options prioritizing efficiency ratings, proper sizing, and basic automation to balance performance with cost-effectiveness.'
+      `Evaluate mechanical system options appropriate for ${climateInfo.label.toLowerCase()} conditions, prioritizing efficiency ratings and proper sizing.`
     );
   } else {
     recommendations.push(
-      'Focus on right-sizing mechanical systems and ensuring proper installation practices to achieve baseline efficiency improvements.'
+      `Focus on right-sizing mechanical systems for local climate conditions and ensuring proper installation practices.`
     );
   }
   
-  // Priority 4: Water and resources
+  // Priority 4: Water and resources (climate-specific)
   if (isLargeBuilding || efficiencyLevel !== 'low') {
     recommendations.push(
-      'Incorporate water efficiency measures including low-flow fixtures, efficient irrigation strategies, and consideration of rainwater harvesting based on local conditions.'
+      `Address water management with climate-appropriate strategies. ${climateRecs.waterConsiderations}`
     );
   } else {
     recommendations.push(
-      'Specify water-efficient fixtures and fittings as a straightforward measure to reduce water consumption and associated costs.'
+      `Specify water-efficient fixtures and consider local precipitation patterns for basic rainwater management.`
     );
   }
   
   // Priority 5: Materials and lifecycle
   if (efficiencyLevel === 'high') {
     recommendations.push(
-      'Consider material selection criteria including embodied carbon, durability, local sourcing, and end-of-life scenarios to address lifecycle environmental impacts.'
+      `Consider material selection criteria including climate resilience, embodied carbon, durability under ${climateInfo.label.toLowerCase()} conditions, and local sourcing.`
     );
   } else if (efficiencyLevel === 'medium') {
     recommendations.push(
-      'Incorporate sustainable material considerations where feasible, prioritizing durable, low-maintenance options with reasonable environmental profiles.'
+      `Incorporate sustainable material considerations prioritizing durability and performance in ${climateInfo.label.toLowerCase()} conditions.`
     );
   } else {
     recommendations.push(
-      'Select durable, low-maintenance materials to extend building lifespan and reduce long-term replacement requirements.'
+      `Select durable, climate-appropriate materials to extend building lifespan and reduce maintenance requirements.`
     );
   }
   
   return recommendations;
 }
 
-function generateChecklist(recommendations: string[]): string[] {
-  const checklistItems = [
+function generateChecklist(recommendations: string[], climateInfo: ClimateInfo): string[] {
+  const baseItems = [
     'Conduct initial assessment of current or baseline building performance conditions',
     'Define measurable sustainability targets aligned with project objectives and budget',
     'Engage relevant consultants early to inform design decisions with technical input',
-    'Establish criteria for material and system selection supporting sustainability goals',
-    'Plan monitoring approach to verify performance outcomes during operation',
   ];
   
-  return checklistItems;
+  // Add climate-specific checklist items
+  const climateItems: string[] = [];
+  
+  if (climateInfo.primaryConcern === 'cooling') {
+    climateItems.push('Analyze solar exposure and develop shading strategy for cooling load reduction');
+  } else if (climateInfo.primaryConcern === 'heating') {
+    climateItems.push('Assess thermal bridging risks and develop insulation continuity strategy');
+  } else {
+    climateItems.push('Evaluate seasonal performance requirements and develop balanced design approach');
+  }
+  
+  climateItems.push('Plan monitoring approach to verify performance outcomes during operation');
+  
+  return [...baseItems, ...climateItems];
 }
 
 function calculateImpact(
