@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Search, Target, CheckSquare, BarChart3, AlertTriangle, ArrowLeft, Thermometer } from 'lucide-react';
+import { Search, Target, CheckSquare, BarChart3, AlertTriangle, ArrowLeft, Thermometer, Download } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
 
 interface DiagnosticResultsProps {
   result: DiagnosticResult;
@@ -11,6 +13,8 @@ interface DiagnosticResultsProps {
 }
 
 export function DiagnosticResults({ result, onReset }: DiagnosticResultsProps) {
+  const { toast } = useToast();
+
   const getImpactBadgeVariant = (level: string) => {
     switch (level) {
       case 'High':
@@ -22,8 +26,154 @@ export function DiagnosticResults({ result, onReset }: DiagnosticResultsProps) {
     }
   };
 
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - margin * 2;
+      let yPos = 20;
+
+      // Helper function to add wrapped text
+      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number = 6): number => {
+        const lines = doc.splitTextToSize(text, maxWidth);
+        doc.text(lines, x, y);
+        return y + lines.length * lineHeight;
+      };
+
+      // Helper to check and add new page if needed
+      const checkNewPage = (neededSpace: number) => {
+        if (yPos + neededSpace > doc.internal.pageSize.getHeight() - 20) {
+          doc.addPage();
+          yPos = 20;
+        }
+      };
+
+      // Title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sustainability Diagnostic Report', margin, yPos);
+      yPos += 12;
+
+      // Date
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPos);
+      yPos += 15;
+
+      // Climate Zone Section
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Detected Climate Zone', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Climate: ${result.climateInfo.label}`, margin, yPos);
+      yPos += 6;
+      doc.text(`Primary Concern: ${result.climateInfo.primaryConcern === 'both' ? 'Heating & Cooling' : result.climateInfo.primaryConcern === 'heating' ? 'Heating' : 'Cooling'}`, margin, yPos);
+      yPos += 6;
+      doc.text(`Characteristics: ${result.climateInfo.characteristics}`, margin, yPos);
+      yPos += 15;
+
+      // Diagnostic Section
+      checkNewPage(40);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sustainability Diagnostic', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      yPos = addWrappedText(result.diagnostic, margin, yPos, contentWidth);
+      yPos += 10;
+
+      // Recommendations Section
+      checkNewPage(30);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Priority Recommendations', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      result.recommendations.forEach((rec, index) => {
+        checkNewPage(25);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}.`, margin, yPos);
+        doc.setFont('helvetica', 'normal');
+        yPos = addWrappedText(rec, margin + 8, yPos, contentWidth - 8);
+        yPos += 4;
+      });
+      yPos += 6;
+
+      // Checklist Section
+      checkNewPage(30);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Actionable Checklist', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      result.checklist.forEach((item) => {
+        checkNewPage(15);
+        doc.text('☐', margin, yPos);
+        yPos = addWrappedText(item, margin + 8, yPos, contentWidth - 8);
+        yPos += 2;
+      });
+      yPos += 6;
+
+      // Impact Level Section
+      checkNewPage(30);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Impact Level', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(result.impactLevel, margin, yPos);
+      yPos += 6;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      yPos = addWrappedText(result.impactExplanation, margin, yPos, contentWidth);
+      yPos += 10;
+
+      // Disclaimer
+      checkNewPage(25);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      yPos = addWrappedText(
+        'Disclaimer: This diagnostic provides an initial sustainability overview and does not replace detailed technical assessments or executive design development.',
+        margin,
+        yPos,
+        contentWidth
+      );
+
+      // Save
+      doc.save('sustainability-diagnostic-report.pdf');
+
+      toast({
+        title: 'PDF exported successfully',
+        description: 'Your diagnostic report has been downloaded.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Export failed',
+        description: 'There was an error generating the PDF.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
+      {/* Export Button */}
+      <div className="flex justify-end">
+        <Button onClick={exportToPDF} variant="outline" className="gap-2">
+          <Download className="h-4 w-4" />
+          Export PDF
+        </Button>
+      </div>
+
       {/* Climate Zone Detection */}
       <Card className="shadow-lg border-primary/20 bg-primary/5">
         <CardHeader className="pb-3">
