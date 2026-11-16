@@ -8,7 +8,7 @@
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 const MAX_BODY_CHARS = 8000;
-const MAX_TOKENS = 2000;
+const MAX_TOKENS = 4000;
 
 // Best-effort limit per IP. It lives in memory, so it resets when the function
 // restarts: it slows down abuse but is not a hard guarantee. The real ceiling
@@ -134,7 +134,7 @@ export default async function handler(req, res) {
       .join('');
     const report = extractJson(text);
     if (!report) {
-      console.error('anthropic_unparseable', text.slice(0, 300));
+      console.error('anthropic_unparseable', data.stop_reason, text.slice(-300));
       return res.status(502).json({ error: 'ai_unparseable' });
     }
     return res.status(200).json({ report });
