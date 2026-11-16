@@ -1,5 +1,7 @@
 # Sustain Guide
 
+**Live app: https://sustain-guide.vercel.app**
+
 A free home comfort and energy check-up for people who are not building professionals.
 
 You enter the city, a few facts about the home and the appliances you use. The app combines the real local climate with your estimated consumption and explains, in plain language, what is worth improving first, with passive design measures ahead of equipment.
