@@ -56,4 +56,4 @@ Vite, React, TypeScript, Tailwind CSS, shadcn/ui, Recharts, jsPDF, Vercel Functi
 
 ## Author
 
-Letiane Benincá, architect and researcher in building energy performance. The first prototype was created in Lovable and then rebuilt with Claude Code.
+Dr. Letiane Benincá, data scientist and researcher in building energy performance. The first prototype was created in Lovable and then rebuilt with Claude Code.
