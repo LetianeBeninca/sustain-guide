@@ -33,7 +33,7 @@ vercel dev
 ## Deploy (Vercel)
 
 1. Import this repository at https://vercel.com/new. The settings in `vercel.json` are picked up automatically.
-2. In **Settings > Environment Variables**, add `ANTHROPIC_API_KEY`. Optionally add `ANTHROPIC_MODEL` (default: `claude-sonnet-5-5`).
+2. In **Settings > Environment Variables**, add `ANTHROPIC_API_KEY`. Optionally add `ANTHROPIC_MODEL` (default: `claude-haiku-5-5`).
 3. Redeploy. Every push to `main` publishes a new version.
 
 The API key stays on the server and is never sent to the browser. The function limits request size and requests per IP on a best-effort basis; set a spend limit in the Anthropic Console as the real ceiling.
