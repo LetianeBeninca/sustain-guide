@@ -1,73 +1,59 @@
-# Welcome to your Lovable project
+# Sustain Guide
 
-## Project info
+A free home comfort and energy check-up for people who are not building professionals.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+You enter the city, a few facts about the home and the appliances you use. The app combines the real local climate with your estimated consumption and explains, in plain language, what is worth improving first, with passive design measures ahead of equipment.
 
-## How can I edit this code?
+Available in Portuguese, Spanish and English.
 
-There are several ways of editing your application.
+## How it works
 
-**Use Lovable**
+1. **Climate by city.** City search and five years of daily weather data come from [Open-Meteo](https://open-meteo.com/) (no API key). The app computes monthly averages, heating degree days (base 18 °C), cooling degree days (base 22 °C), hot and cold days, rain and solar radiation.
+2. **Home and appliances.** A short form about the home, plus an appliance list with editable typical values. Yearly consumption is `power × hours × months` or `kWh per use × uses per week`.
+3. **Report.** A serverless function sends the summary to Claude (Anthropic API), which writes the report in the user's language. If the AI is not available (no key, no credits, rate limit), the app shows a rule-based report instead, so it always returns a result.
+4. **PDF.** The report can be downloaded as a PDF.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+The numbers are indicative estimates. They do not replace an energy certificate or a professional visit.
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Run locally
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app opens at http://localhost:8080. With `npm run dev` only the front end runs, so the report is the rule-based one. To test the AI report locally, use the Vercel CLI:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm i -g vercel
+cp .env.example .env.local   # then fill in ANTHROPIC_API_KEY
+vercel dev
+```
 
-**Use GitHub Codespaces**
+## Deploy (Vercel)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Import this repository at https://vercel.com/new. The settings in `vercel.json` are picked up automatically.
+2. In **Settings > Environment Variables**, add `ANTHROPIC_API_KEY`. Optionally add `ANTHROPIC_MODEL` (default: `claude-sonnet-5-5`).
+3. Redeploy. Every push to `main` publishes a new version.
 
-## What technologies are used for this project?
+The API key stays on the server and is never sent to the browser. The function limits request size and requests per IP on a best-effort basis; set a spend limit in the Anthropic Console as the real ceiling.
 
-This project is built with:
+## Project structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+api/diagnose.js           serverless function that calls Claude
+src/lib/climate.ts        Open-Meteo search and climate summary
+src/lib/appliances.ts     appliance catalogue and kWh calculation
+src/lib/report.ts         AI request and rule-based fallback report
+src/lib/pdf.ts            PDF export
+src/locales/              pt, es, en texts
+src/components/           form steps, climate card, results
+```
 
-## How can I deploy this project?
+## Stack
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Vite, React, TypeScript, Tailwind CSS, shadcn/ui, Recharts, jsPDF, Vercel Functions, Anthropic API.
 
-## Can I connect a custom domain to my Lovable project?
+## Author
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Letiane Benincá, architect and researcher in building energy performance. The first prototype was created in Lovable and then rebuilt with Claude Code.
